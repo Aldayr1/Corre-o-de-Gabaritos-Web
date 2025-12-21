@@ -25,57 +25,116 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Gera o HTML do gabarito com layout em grid 3x7 (21 questões por página)
+// Gera o HTML com os cantos pretos
 function generateGabaritoHTML(headerText, numQuestions, numAlternatives) {
-    const alternatives = ['A', 'B', 'C', 'D', 'E', 'F']. slice(0, numAlternatives);
-    const questoesPorPagina = 21; // 3 colunas x 7 linhas
-    const totalPaginas = Math.ceil(numQuestions / questoesPorPagina);
+    const alternatives = ['A', 'B', 'C', 'D', 'E', 'F'].slice(0, numAlternatives);
+    const questionsPerCol = Math.ceil(numQuestions / 3);
     
-    let html = '';
+    let html = `
+        <div class="gabarito-page">
+            <div class="corner-square corner-top-left"></div>
+            <div class="corner-square corner-top-right"></div>
+            <div class="corner-square corner-bottom-left"></div>
+            <div class="corner-square corner-bottom-right"></div>
+            
+            <div class="header-text">${escapeHtml(headerText)}</div>
+            
+            <div class="questions-container">
+    `;
 
-    for (let pagina = 1; pagina <= totalPaginas; pagina++) {
-        const inicio = (pagina - 1) * questoesPorPagina + 1;
-        const fim = Math.min(pagina * questoesPorPagina, numQuestions);
-        
-        html += `
-            <div class="gabarito-page">
-                <div class="corner-square corner-top-left"></div>
-                <div class="corner-square corner-top-right"></div>
-                <div class="corner-square corner-bottom-left"></div>
-                <div class="corner-square corner-bottom-right"></div>
-                
-                <div class="header-text">
-                    ${escapeHtml(headerText)}
-                    ${totalPaginas > 1 ? ` - Página ${pagina}/${totalPaginas}` : ''}
-                </div>
-                
-                <div class="questions-container">
-        `;
+    for (let col = 0; col < 3; col++) {
+        html += `<div class="gabarito-column">`;
+        const start = (col * questionsPerCol) + 1;
+        const end = Math.min((col + 1) * questionsPerCol, numQuestions);
 
-        for (let i = inicio; i <= fim; i++) {
+        for (let q = start; q <= end; q++) {
             html += `
                 <div class="question-row">
-                    <div class="question-number">Q${i}</div>
+                    <div class="question-number">${q}</div>
                     <div class="alternatives">
             `;
-            
             alternatives.forEach(alt => {
                 html += `<div class="bubble">${alt}</div>`;
             });
-            
-            html += `
-                    </div>
-                </div>
-            `;
+            html += `</div></div>`;
         }
-
-        html += `
-                </div>
-            </div>
-        `;
+        
+        // Preenche visualmente coluna vazia se necessário
+        if (start > numQuestions) html += ``;
+        
+        html += `</div>`;
     }
 
+    html += `
+            </div>
+            <div style="position: absolute; bottom: 12mm; right: 15mm; font-size: 10px; color: #aaa;">
+                
+            </div>
+        </div>
+    `;
+
     return html;
+}
+
+// Geração de PDF corrigida para não esticar
+async function generatePDF() {
+    const headerText = document.getElementById('headerText').value || 'GABARITO';
+    const numQuestions = parseInt(document.getElementById('numQuestions').value) || 20;
+    const numAlternatives = parseInt(document.getElementById('numAlternatives').value) || 4;
+
+    if (!bibliotecasCarregadas) {
+        alert('Aguarde o carregamento das bibliotecas...');
+        return;
+    }
+
+    const botao = event.target;
+    botao.textContent = '⏳ Gerando...';
+    botao.disabled = true;
+
+    try {
+        // 1. Cria elemento temporário invisível, mas com tamanho FIXO
+        const element = document.createElement('div');
+        element.innerHTML = generateGabaritoHTML(headerText, numQuestions, numAlternatives);
+        
+        // Força configurações para a captura ser perfeita
+        element.style.width = '210mm';
+        element.style.height = '297mm'; // Altura fixa A4
+        element.style.position = 'absolute';
+        element.style.top = '0';
+        element.style.left = '-9999px'; // Esconde da visão
+        document.body.appendChild(element);
+
+        const { jsPDF } = window.jspdf;
+        // Cria PDF A4
+        const pdf = new jsPDF('p', 'mm', 'a4'); 
+
+        // Captura o elemento
+        const canvas = await html2canvas(element.querySelector('.gabarito-page'), {
+            scale: 2, // Melhor qualidade
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            width: 794, // Largura em pixels aproximada para A4 a 96DPI (210mm)
+            height: 1123, // Altura em pixels (297mm)
+            windowWidth: 1200 // Simula tela grande para evitar layout mobile
+        });
+
+        // Adiciona ao PDF com dimensões EXATAS (sem calcular escala dinâmica)
+        const imgData = canvas.toDataURL('image/png');
+        
+        // (Imagem, Tipo, X, Y, Largura, Altura) -> Fixos em A4
+        pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+
+        pdf.save(`gabarito_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.pdf`);
+        
+        document.body.removeChild(element);
+        
+    } catch (error) {
+        console.error(error);
+        alert('Erro ao gerar PDF');
+    } finally {
+        botao.textContent = '📥 Gerar e Baixar PDF';
+        botao.disabled = false;
+    }
 }
 
 // Função para atualizar pré-visualização
