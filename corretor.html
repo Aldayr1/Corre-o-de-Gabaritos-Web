@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corretor de Gabaritos</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .correction-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .column {
+            flex: 1;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .bubble-input {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 50%;
+            margin: 2px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .bubble-input.selected {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .question-input-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .q-num {
+            width: 30px;
+            font-weight: bold;
+        }
+        #result-area {
+            margin-top: 20px;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 8px;
+            display: none;
+        }
+        .score-card {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .error-msg {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" style="text-decoration: none; color: #666;">&larr; Voltar ao Menu</a>
+        <h1>✅ Corretor de Gabaritos</h1>
+
+        <div class="form-section">
+            <div class="form-group">
+                <label for="numQuestionsParams">Número de Questões:</label>
+                <input type="number" id="numQuestionsParams" min="1" max="100" value="10">
+            </div>
+            <div class="form-group">
+                <label for="numAltParams">Alternativas:</label>
+                <select id="numAltParams">
+                    <option value="4" selected>4 (A-D)</option>
+                    <option value="5">5 (A-E)</option>
+                </select>
+            </div>
+            <button class="btn-generate" onclick="generateInputs()">Configurar Grade</button>
+        </div>
+
+        <div id="correction-area" style="display:none;">
+            <div class="correction-container">
+                <div class="column">
+                    <h3>🔑 Gabarito Oficial</h3>
+                    <div id="official-key-container"></div>
+                </div>
+                <div class="column">
+                    <h3>📝 Respostas do Aluno</h3>
+                    <div id="student-answers-container"></div>
+                </div>
+            </div>
+
+            <button class="btn-generate" style="margin-top: 20px; background-color: #28a745;" onclick="submitCorrection()">
+                Calcular Nota
+            </button>
+        </div>
+
+        <div id="result-area">
+            <h2>Resultado</h2>
+            <div id="result-content"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentConfig = {
+            questions: 10,
+            alternatives: 4
+        };
+
+        const alts = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+        function generateInputs() {
+            const q = parseInt(document.getElementById('numQuestionsParams').value);
+            const a = parseInt(document.getElementById('numAltParams').value);
+
+            currentConfig.questions = q;
+            currentConfig.alternatives = a;
+
+            renderInputs('official-key-container', 'key');
+            renderInputs('student-answers-container', 'student');
+
+            document.getElementById('correction-area').style.display = 'block';
+            document.getElementById('result-area').style.display = 'none';
+        }
+
+        function renderInputs(containerId, prefix) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            for (let i = 1; i <= currentConfig.questions; i++) {
+                const row = document.createElement('div');
+                row.className = 'question-input-row';
+
+                const label = document.createElement('div');
+                label.className = 'q-num';
+                label.textContent = i;
+                row.appendChild(label);
+
+                for (let j = 0; j < currentConfig.alternatives; j++) {
+                    const bubble = document.createElement('div');
+                    bubble.className = 'bubble-input';
+                    bubble.textContent = alts[j];
+                    bubble.onclick = () => selectBubble(prefix, i, alts[j]);
+                    bubble.id = `${prefix}-${i}-${alts[j]}`;
+                    row.appendChild(bubble);
+                }
+                container.appendChild(row);
+            }
+        }
+
+        const answers = {
+            key: {},
+            student: {}
+        };
+
+        function selectBubble(prefix, question, alt) {
+            // Desmarcar anterior
+            const prev = answers[prefix][question];
+            if (prev) {
+                document.getElementById(`${prefix}-${question}-${prev}`).classList.remove('selected');
+            }
+
+            // Marcar novo
+            answers[prefix][question] = alt;
+            document.getElementById(`${prefix}-${question}-${alt}`).classList.add('selected');
+        }
+
+        async function submitCorrection() {
+            const resultArea = document.getElementById('result-area');
+            const resultContent = document.getElementById('result-content');
+
+            // Validação simples
+            if (Object.keys(answers.key).length < currentConfig.questions) {
+                alert('Preencha todo o Gabarito Oficial!');
+                return;
+            }
+
+            resultContent.innerHTML = 'Processando...';
+            resultArea.style.display = 'block';
+
+            try {
+                const response = await fetch('api/corrigir.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        gabarito: answers.key,
+                        respostas: answers.student,
+                        total_questions: currentConfig.questions
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    resultContent.innerHTML = `<p class="error-msg">Erro: ${data.error}</p>`;
+                    return;
+                }
+
+                let html = `
+                    <div class="score-card">Nota: ${data.score.toFixed(1)} / 10.0</div>
+                    <p>Acertos: <strong>${data.correct_count}</strong> de ${data.total_questions}</p>
+                    <hr>
+                    <h3>Detalhamento:</h3>
+                    <ul style="list-style: none; padding: 0;">
+                `;
+
+                data.details.forEach(item => {
+                    const statusIcon = item.correct ? '✅' : '❌';
+                    const style = item.correct ? 'color: green;' : 'color: red;';
+                    html += `
+                        <li style="margin-bottom: 5px; ${style}">
+                            Questão ${item.question}: ${statusIcon}
+                            (Gabarito: ${item.expected} | Aluno: ${item.given || '-'})
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+
+                resultContent.innerHTML = html;
+
+            } catch (error) {
+                console.error(error);
+                resultContent.innerHTML = `<p class="error-msg">Erro na comunicação com o servidor.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

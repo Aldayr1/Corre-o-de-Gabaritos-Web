@@ -1,45 +1,75 @@
-# 📝 Gerador e Corretor de Gabaritos Web
+# 📝 Sistema Integrado de Avaliações (Gerador e Corretor)
 
-![Status do Projeto](https://img.shields.io/badge/status-em_desenvolvimento-yellow)
+![Status do Projeto](https://img.shields.io/badge/status-pronto-green)
 ![Licença](https://img.shields.io/badge/license-MIT-blue)
-![Web](https://img.shields.io/badge/platform-web-green)
+![Backend](https://img.shields.io/badge/backend-PHP-purple)
 
 ## 📖 Sobre o Projeto
 
-Este projeto consiste em uma solução completa baseada inteiramente em **tecnologias web** para a **criação de folhas de resposta (gabaritos)** e a **correção automatizada** das mesmas. 
+Este projeto é uma solução web completa para **geração de folhas de resposta (gabaritos)** e **correção automatizada de provas**. Ideal para professores e instituições de ensino que desejam agilidade sem depender de leitores ópticos caros.
 
-O objetivo é fornecer uma ferramenta leve, acessível via navegador e que não dependa de instalação de softwares complexos ou hardwares específicos (como leitoras ópticas dedicadas), ideal para professores, escolas e pequenos exames.
+O sistema é dividido em dois módulos principais:
+1.  **Gerador**: Cria arquivos PDF prontos para impressão.
+2.  **Corretor**: Interface para lançamento de gabaritos e correção automática via backend.
 
 ## ✨ Funcionalidades
 
-* **Geração de Gabaritos:**
-    * Configuração do número de questões e alternativas.
-    * Personalização do cabeçalho (Nome da Instituição, Logo, Disciplina).
-    * Exportação pronta para impressão (Layout responsivo/PDF).
-* **Correção de Provas:**
-    * Interface para lançamento das respostas dos alunos (ou upload).
-    * Comparação automática com o gabarito oficial.
-    * Cálculo imediato de nota e acertos.
-* **Relatórios:**
-    * Visualização simples de estatísticas de erros e acertos (Opcional/Futuro).
+### 🖨️ Gerador de Gabaritos
+* Personalização completa do cabeçalho.
+* Configuração flexível (até 100 questões, 2 a 6 alternativas).
+* Geração de PDF em alta qualidade (A4).
+* Layout otimizado para impressão e economia de tinta.
+
+### ✅ Corretor Automático
+* Interface intuitiva para definição do Gabarito Oficial.
+* Lançamento rápido das respostas dos alunos.
+* **Backend em PHP** para processamento seguro e preciso.
+* Relatório imediato com:
+    * Nota calculada (0-10).
+    * Total de acertos/erros.
+    * Detalhamento questão por questão.
 
 ## 🚀 Tecnologias Utilizadas
 
-O projeto foi desenvolvido utilizando apenas padrões web:
-
-* **HTML5** - Estruturação semântica.
-* **CSS3** - Estilização e layout para impressão.
-* **JavaScript (Vanilla)** - Lógica de geração dinâmica e correção no lado do cliente.
-* **[Opcional: PHP/Python]** - Backend para processamento de dados (se aplicável).
-* **[Opcional: Biblioteca PDF]** - (Ex: html2pdf ou jspdf).
+* **Frontend**: HTML5, CSS3, JavaScript (Vanilla).
+* **Backend**: PHP (>= 7.0).
+* **Bibliotecas**: `jspdf` e `html2canvas` (Geração de PDF).
 
 ## 📂 Estrutura de Pastas
 
 ```bash
 /
-├── assets/          # Imagens, logos e estilos CSS
-├── js/              # Scripts de lógica (geração e correção)
-├── index.html       # Página principal
-├── gerador.html     # Página de criação do gabarito
-├── corretor.html    # Página de inserção/correção
+├── api/
+│   ├── ExamGrader.php   # Classe com lógica de correção
+│   └── corrigir.php     # Endpoint da API
+├── tests/
+│   └── test_grader.php  # Testes unitários do backend
+├── index.html           # Menu Principal
+├── gerador.html         # Módulo Gerador (Frontend)
+├── corretor.html        # Módulo Corretor (Frontend)
+├── script.js            # Lógica do Gerador
+├── style.css            # Estilos globais
 └── README.md
+```
+
+## 🛠️ Como Usar
+
+### Pré-requisitos
+* Um servidor web com suporte a PHP (Apache, Nginx, ou PHP Built-in Server).
+
+### Instalação e Execução
+1. Clone o repositório.
+2. Inicie o servidor PHP na raiz do projeto:
+   ```bash
+   php -S localhost:8000
+   ```
+3. Acesse `http://localhost:8000` no seu navegador.
+
+### Passo a Passo
+1. **Para Gerar Provas**: Clique em "Gerador de Gabaritos", configure a prova e baixe o PDF.
+2. **Para Corrigir**:
+    * Clique em "Corretor Automático".
+    * Defina o número de questões.
+    * Preencha o Gabarito Oficial.
+    * Preencha as respostas do aluno.
+    * Clique em "Calcular Nota" para ver o resultado.
